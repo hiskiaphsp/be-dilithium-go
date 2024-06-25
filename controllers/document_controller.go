@@ -74,7 +74,20 @@ func (c *DocumentController) GetDocumentByID(ctx *gin.Context) {
 
 	// Menghasilkan URL langsung dari path file
 	documentURL := c.PublicStorage + document.Path
-	ctx.JSON(http.StatusOK, gin.H{"document": document, "url": documentURL})
+
+	// Mendapatkan ukuran file
+	fileInfo, err := os.Stat(document.Path)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get file info"})
+		return
+	}
+	fileSize := fileInfo.Size()
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"document": document,
+		"url":      documentURL,
+		"size":     fileSize,
+	})
 }
 
 // GetAllDocuments menangani request untuk mengambil semua dokumen
@@ -89,9 +102,19 @@ func (c *DocumentController) GetAllDocuments(ctx *gin.Context) {
 	var documentsWithUrls []gin.H
 	for _, doc := range documents {
 		documentURL := c.PublicStorage + doc.Path
+
+		// Mendapatkan ukuran file
+		fileInfo, err := os.Stat(doc.Path)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get file info"})
+			return
+		}
+		fileSize := fileInfo.Size()
+
 		docWithUrl := gin.H{
 			"document": doc,
 			"url":      documentURL,
+			"size":     fileSize,
 		}
 		documentsWithUrls = append(documentsWithUrls, docWithUrl)
 	}
@@ -120,6 +143,30 @@ func (c *DocumentController) UpdateDocument(ctx *gin.Context) {
 func (c *DocumentController) DeleteDocument(ctx *gin.Context) {
 	id := ctx.Param("id")
 
+	// Cari dokumen berdasarkan ID
+	document, err := c.Service.GetById(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Document not found"})
+		return
+	}
+
+	// Hapus file dari sistem file
+	if err := os.Remove(document.Path); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete file"})
+		return
+	}
+
+	// Hapus folder jika kosong
+	folderPath := filepath.Dir(document.Path)
+	if err := os.Remove(folderPath); err != nil {
+		// Jika error bukan karena folder tidak kosong, laporkan error
+		if !os.IsNotExist(err) && !os.IsExist(err) {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete folder"})
+			return
+		}
+	}
+
+	// Hapus catatan dokumen dari database
 	result, err := c.Service.Delete(ctx, id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete document"})

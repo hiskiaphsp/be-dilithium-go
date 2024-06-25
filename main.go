@@ -37,7 +37,10 @@ func main() {
 
 	router.POST("/generate-keypair", dilithiumController.GenerateKeyPair)
 	router.POST("/sign-message", dilithiumController.SignMessage)
+	router.POST("/sign-message-url", dilithiumController.SignMessageUrl)
 	router.POST("/verify-signature", dilithiumController.VerifySignature)
+	router.POST("/verify-signature-url", dilithiumController.VerifySignatureURL)
+	router.POST("/analyze", dilithiumController.AnalyzeExecutionTimeAndSizes)
 
 	// Routes
 	router.POST("/documents", documentController.CreateDocument)
