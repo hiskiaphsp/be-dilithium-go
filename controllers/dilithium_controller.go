@@ -487,7 +487,91 @@ func (ctrl *DilithiumController) AnalyzeExecutionTimeAndSizes(c *gin.Context) {
 	privateKeySize = int64(len(privateKey))
 	publicKeySize = int64(len(publicKey))
 	signatureSize = int64(len(signature))
+	print(valid)
+	// Return analysis results
+	c.JSON(http.StatusOK, gin.H{
+		"key_generation_time":    keyGenTime.Microseconds(),
+		"signing_time":           signTime.Microseconds(),
+		"verification_time":      verifyTime.Microseconds(),
+		"private_key_size_bytes": privateKeySize,
+		"public_key_size_bytes":  publicKeySize,
+		"signature_size_bytes":   signatureSize,
+		"valid":                  valid,
+	})
+}
 
+func (ctrl *DilithiumController) AnalyzeExecutionTimeAndSizesUrl(c *gin.Context) {
+
+	// Get message URL from request
+	messageURL := c.PostForm("messageURL")
+	if messageURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Message URL is required"})
+		return
+	}
+
+	resp, err := http.Get(messageURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch message file"})
+		return
+	}
+
+	// Read message content
+	messageBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Use Dilithium2 as default mode if not specified
+	mode := c.DefaultPostForm("mode", "Dilithium5")
+
+	// Measure execution time for key pair generation
+	startKeyGen := time.Now()
+	dilithiumService, err := ctrl.serviceFactory(mode)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	publicKey, privateKey, err := dilithiumService.GenerateKeyPair()
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	keyGenTime := time.Since(startKeyGen)
+
+	// Measure execution time for signing
+	startSign := time.Now()
+	signature, err := dilithiumService.SignMessage(privateKey, messageBytes)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	signTime := time.Since(startSign)
+
+	// Measure execution time for signature verification
+	startVerify := time.Now()
+	valid, err := dilithiumService.VerifySignature(publicKey, messageBytes, signature)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	verifyTime := time.Since(startVerify)
+
+	// Get sizes of keys and signature in bytes
+	var privateKeySize, publicKeySize, signatureSize int64
+
+	// Dummy key pair generation to get sizes (actual sizes might differ)
+	privateKeySize = int64(len(privateKey))
+	publicKeySize = int64(len(publicKey))
+	signatureSize = int64(len(signature))
+	print(valid)
 	// Return analysis results
 	c.JSON(http.StatusOK, gin.H{
 		"key_generation_time":    keyGenTime.Microseconds(),

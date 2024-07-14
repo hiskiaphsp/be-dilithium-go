@@ -1,5 +1,3 @@
-// main.go
-
 package main
 
 import (
@@ -35,19 +33,24 @@ func main() {
 
 	router.Static("public/storage", "public/storage")
 
-	router.POST("/generate-keypair", dilithiumController.GenerateKeyPair)
-	router.POST("/sign-message", dilithiumController.SignMessage)
-	router.POST("/sign-message-url", dilithiumController.SignMessageUrl)
-	router.POST("/verify-signature", dilithiumController.VerifySignature)
-	router.POST("/verify-signature-url", dilithiumController.VerifySignatureURL)
-	router.POST("/analyze", dilithiumController.AnalyzeExecutionTimeAndSizes)
+	// Create API v1 group
+	apiV1 := router.Group("/api/v1")
+	{
+		apiV1.POST("/generate-keypair", dilithiumController.GenerateKeyPair)
+		apiV1.POST("/sign-message", dilithiumController.SignMessage)
+		apiV1.POST("/sign-message-url", dilithiumController.SignMessageUrl)
+		apiV1.POST("/verify-signature", dilithiumController.VerifySignature)
+		apiV1.POST("/verify-signature-url", dilithiumController.VerifySignatureURL)
+		apiV1.POST("/analyze", dilithiumController.AnalyzeExecutionTimeAndSizes)
+		apiV1.POST("/analyze-url", dilithiumController.AnalyzeExecutionTimeAndSizesUrl)
 
-	// Routes
-	router.POST("/documents", documentController.CreateDocument)
-	router.GET("/documents/:id", documentController.GetDocumentByID)
-	router.GET("/documents", documentController.GetAllDocuments)
-	router.PUT("/documents", documentController.UpdateDocument)
-	router.DELETE("/documents/:id", documentController.DeleteDocument)
+		// Document routes
+		apiV1.POST("/documents", documentController.CreateDocument)
+		apiV1.GET("/documents/:id", documentController.GetDocumentByID)
+		apiV1.GET("/documents", documentController.GetAllDocuments)
+		apiV1.PUT("/documents", documentController.UpdateDocument)
+		apiV1.DELETE("/documents/:id", documentController.DeleteDocument)
+	}
 
 	// Run server
 	port := config.Port
