@@ -6,16 +6,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/hiskiaphsp/be-dilithium-go/config"
-	"github.com/hiskiaphsp/be-dilithium-go/controllers"
-	controller "github.com/hiskiaphsp/be-dilithium-go/controllers"
-	"github.com/hiskiaphsp/be-dilithium-go/repositories"
-	"github.com/hiskiaphsp/be-dilithium-go/services"
-	service "github.com/hiskiaphsp/be-dilithium-go/services"
+	"be-dilithium/config"
+	"be-dilithium/controllers"
+	controller "be-dilithium/controllers"
+	"be-dilithium/repositories"
+	"be-dilithium/services"
+	service "be-dilithium/services"
 )
 
-// Handler initializes and runs the Gin server.
-func Handler() *gin.Engine {
+func Handler(c *gin.Context) {
 	// Ensure MongoDB connection is available
 	if config.MongoDB == nil {
 		log.Fatal("MongoDB connection is not available")
@@ -30,6 +29,7 @@ func Handler() *gin.Engine {
 	dilithiumController := controller.NewDilithiumController(service.NewDilithiumService)
 
 	// Initialize Gin router
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
 	router.Static("public/storage", "public/storage")
@@ -53,15 +53,10 @@ func Handler() *gin.Engine {
 		apiV1.DELETE("/documents/:id", documentController.DeleteDocument)
 	}
 
-	return router
-}
-
-func main() {
-	router := Handler()
 	// Run server
 	port := config.Port
 	if port == "" {
-		port = "80"
+		port = "8080"
 	}
-	router.Run(":" + port)
+	router.ServeHTTP(c.Writer, c.Request)
 }
