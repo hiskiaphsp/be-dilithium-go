@@ -5,8 +5,8 @@ package services
 import (
 	"context"
 
-	"be-dilithium/models"
-	"be-dilithium/repositories"
+	"github.com/hiskiaphsp/be-dilithium-go/models"
+	"github.com/hiskiaphsp/be-dilithium-go/repositories"
 )
 
 type DocumentService struct {

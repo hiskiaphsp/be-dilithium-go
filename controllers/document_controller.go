@@ -11,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"be-dilithium/models"
-	"be-dilithium/services"
+	"github.com/hiskiaphsp/be-dilithium-go/models"
+	"github.com/hiskiaphsp/be-dilithium-go/services"
 )
 
 type DocumentController struct {

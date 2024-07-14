@@ -5,7 +5,7 @@ package repositories
 import (
 	"context"
 
-	"be-dilithium/models"
+	"github.com/hiskiaphsp/be-dilithium-go/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

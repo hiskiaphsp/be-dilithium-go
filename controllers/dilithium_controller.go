@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	service "be-dilithium/services"
+	service "github.com/hiskiaphsp/be-dilithium-go/services"
 
 	"github.com/gin-gonic/gin"
 )
