@@ -2,6 +2,7 @@ package handler
 
 import (
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +15,9 @@ import (
 	service "github.com/hiskiaphsp/be-dilithium-go/services"
 )
 
-func Handler(c *gin.Context) {
+var router *gin.Engine
+
+func init() {
 	// Ensure MongoDB connection is available
 	if config.MongoDB == nil {
 		log.Fatal("MongoDB connection is not available")
@@ -30,7 +33,7 @@ func Handler(c *gin.Context) {
 
 	// Initialize Gin router
 	gin.SetMode(gin.ReleaseMode)
-	router := gin.Default()
+	router = gin.Default()
 
 	router.Static("public/storage", "public/storage")
 
@@ -52,7 +55,9 @@ func Handler(c *gin.Context) {
 		apiV1.PUT("/documents", documentController.UpdateDocument)
 		apiV1.DELETE("/documents/:id", documentController.DeleteDocument)
 	}
+}
 
-	// Run server
-	router.ServeHTTP(c.Writer, c.Request)
+// Handler is the exported function Vercel looks for
+func Handler(w http.ResponseWriter, r *http.Request) {
+	router.ServeHTTP(w, r)
 }
