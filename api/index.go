@@ -3,7 +3,6 @@ package handler
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -27,7 +26,10 @@ func init() {
 	db := config.MongoDB.Database(config.DBName)
 	documentRepo := repositories.NewDocumentRepository(db, "documents")
 	documentService := services.NewDocumentService(documentRepo)
-	documentController := controllers.NewDocumentController(documentService, os.Getenv("PUBLIC_STORAGE"))
+
+	// Directly pass the public storage path here
+	documentController := controllers.NewDocumentController(documentService, "https://be-dilithium-go.vercel.app")
+
 	// Initialize the Dilithium controller with a factory function for creating the service
 	dilithiumController := controller.NewDilithiumController(service.NewDilithiumService)
 
