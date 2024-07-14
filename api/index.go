@@ -54,9 +54,5 @@ func Handler(c *gin.Context) {
 	}
 
 	// Run server
-	port := config.Port
-	if port == "" {
-		port = "8080"
-	}
 	router.ServeHTTP(c.Writer, c.Request)
 }
