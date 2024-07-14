@@ -6,12 +6,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"be-dilithium/config"
-	"be-dilithium/controllers"
-	controller "be-dilithium/controllers"
-	"be-dilithium/repositories"
-	"be-dilithium/services"
-	service "be-dilithium/services"
+	"github.com/hiskiaphsp/be-dilithium-go/config"
+	"github.com/hiskiaphsp/be-dilithium-go/controllers"
+	controller "github.com/hiskiaphsp/be-dilithium-go/controllers"
+	"github.com/hiskiaphsp/be-dilithium-go/repositories"
+	"github.com/hiskiaphsp/be-dilithium-go/services"
+	service "github.com/hiskiaphsp/be-dilithium-go/services"
 )
 
 func Handler(c *gin.Context) {
