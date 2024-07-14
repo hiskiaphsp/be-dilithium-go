@@ -2,11 +2,9 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vercel/go-bridge/go/bridge"
 
 	"be-dilithium/config"
 	"be-dilithium/controllers"
@@ -16,10 +14,8 @@ import (
 	service "be-dilithium/services"
 )
 
-type handler struct{}
-
-// ServeHTTP implements the http.Handler interface
-func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// Handler initializes and runs the Gin server.
+func Handler() *gin.Engine {
 	// Ensure MongoDB connection is available
 	if config.MongoDB == nil {
 		log.Fatal("MongoDB connection is not available")
@@ -30,12 +26,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	documentRepo := repositories.NewDocumentRepository(db, "documents")
 	documentService := services.NewDocumentService(documentRepo)
 	documentController := controllers.NewDocumentController(documentService, os.Getenv("PUBLIC_STORAGE"))
+	// Initialize the Dilithium controller with a factory function for creating the service
 	dilithiumController := controller.NewDilithiumController(service.NewDilithiumService)
 
 	// Initialize Gin router
-	router := gin.New()
+	router := gin.Default()
 
-	router.Static("/public/storage", "public/storage")
+	router.Static("public/storage", "public/storage")
 
 	// Create API v1 group
 	apiV1 := router.Group("/api/v1")
@@ -56,9 +53,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		apiV1.DELETE("/documents/:id", documentController.DeleteDocument)
 	}
 
-	router.ServeHTTP(w, r)
+	return router
 }
 
 func main() {
-	bridge.Start(&handler{})
+	router := Handler()
+	// Run server
+	port := config.Port
+	if port == "" {
+		port = "80"
+	}
+	router.Run(":" + port)
 }
