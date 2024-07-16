@@ -38,6 +38,7 @@ func Handler() *gin.Engine {
 	apiV1 := router.Group("/api/v1")
 	{
 		apiV1.POST("/generate-keypair", dilithiumController.GenerateKeyPair)
+		apiV1.POST("/generate-keypair-time", dilithiumController.GenerateKeyPairTime)
 		apiV1.POST("/sign-message", dilithiumController.SignMessage)
 		apiV1.POST("/sign-message-url", dilithiumController.SignMessageUrl)
 		apiV1.POST("/verify-signature", dilithiumController.VerifySignature)

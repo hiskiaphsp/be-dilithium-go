@@ -22,6 +22,37 @@ func NewDilithiumController(serviceFactory func(modeName string) (*service.Dilit
 	return &DilithiumController{serviceFactory: serviceFactory}
 }
 
+func (ctrl *DilithiumController) GenerateKeyPairTime(c *gin.Context) {
+	var req struct {
+		Mode string `json:"mode"`
+	}
+
+	// Attempt to bind JSON, but ignore errors
+	_ = c.ShouldBindJSON(&req)
+
+	// Use Dilithium2 as default mode if not specified
+	if req.Mode == "" {
+		req.Mode = "Dilithium2"
+	}
+
+	dilithiumService, err := ctrl.serviceFactory(req.Mode)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	start := time.Now()
+
+	_, _, err = dilithiumService.GenerateKeyPair()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	duration := time.Since(start).Microseconds()
+
+	c.JSON(http.StatusOK, gin.H{"generation_time_ms": duration})
+}
 func (ctrl *DilithiumController) GenerateKeyPair(c *gin.Context) {
 	var req struct {
 		Mode string `json:"mode"`
@@ -444,6 +475,9 @@ func (ctrl *DilithiumController) AnalyzeExecutionTimeAndSizes(c *gin.Context) {
 		return
 	}
 
+	// Get the size of the message
+	messageSize := len(messageBytes)
+
 	// Use Dilithium2 as default mode if not specified
 	mode := c.DefaultPostForm("mode", "Dilithium5")
 
@@ -455,7 +489,6 @@ func (ctrl *DilithiumController) AnalyzeExecutionTimeAndSizes(c *gin.Context) {
 		return
 	}
 	publicKey, privateKey, err := dilithiumService.GenerateKeyPair()
-
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -481,18 +514,16 @@ func (ctrl *DilithiumController) AnalyzeExecutionTimeAndSizes(c *gin.Context) {
 	verifyTime := time.Since(startVerify)
 
 	// Get sizes of keys and signature in bytes
-	var privateKeySize, publicKeySize, signatureSize int64
+	privateKeySize := len(privateKey)
+	publicKeySize := len(publicKey)
+	signatureSize := len(signature)
 
-	// Dummy key pair generation to get sizes (actual sizes might differ)
-	privateKeySize = int64(len(privateKey))
-	publicKeySize = int64(len(publicKey))
-	signatureSize = int64(len(signature))
-	print(valid)
 	// Return analysis results
 	c.JSON(http.StatusOK, gin.H{
 		"key_generation_time":    keyGenTime.Microseconds(),
 		"signing_time":           signTime.Microseconds(),
 		"verification_time":      verifyTime.Microseconds(),
+		"message_size_bytes":     messageSize,
 		"private_key_size_bytes": privateKeySize,
 		"public_key_size_bytes":  publicKeySize,
 		"signature_size_bytes":   signatureSize,
