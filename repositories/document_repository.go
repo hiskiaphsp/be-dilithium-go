@@ -3,63 +3,55 @@
 package repositories
 
 import (
+	"be-dilithium/models"
 	"context"
 
-	"be-dilithium/models"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"gorm.io/gorm"
 )
 
 type DocumentRepository struct {
-	Collection *mongo.Collection
+	DB *gorm.DB
 }
 
-func NewDocumentRepository(db *mongo.Database, collectionName string) *DocumentRepository {
+func NewDocumentRepository(db *gorm.DB) *DocumentRepository {
 	return &DocumentRepository{
-		Collection: db.Collection(collectionName),
+		DB: db,
 	}
 }
 
-func (r *DocumentRepository) Create(ctx context.Context, document *models.Document) (*mongo.InsertOneResult, error) {
-	return r.Collection.InsertOne(ctx, document)
-}
-
-func (r *DocumentRepository) GetById(ctx context.Context, id string) (*models.Document, error) {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
+func (r *DocumentRepository) Create(ctx context.Context, document *models.Document) (*models.Document, error) {
+	if err := r.DB.WithContext(ctx).Create(document).Error; err != nil {
 		return nil, err
 	}
+	return document, nil
+}
+
+func (r *DocumentRepository) GetById(ctx context.Context, id uint) (*models.Document, error) {
 	var document models.Document
-	err = r.Collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&document)
-	return &document, err
+	if err := r.DB.WithContext(ctx).First(&document, id).Error; err != nil {
+		return nil, err
+	}
+	return &document, nil
 }
 
 func (r *DocumentRepository) GetAll(ctx context.Context) ([]models.Document, error) {
 	var documents []models.Document
-	cursor, err := r.Collection.Find(ctx, bson.M{})
-	if err != nil {
-		return nil, err
-	}
-	if err = cursor.All(ctx, &documents); err != nil {
+	if err := r.DB.WithContext(ctx).Find(&documents).Error; err != nil {
 		return nil, err
 	}
 	return documents, nil
 }
 
-func (r *DocumentRepository) Update(ctx context.Context, document *models.Document) (*mongo.UpdateResult, error) {
-	objID, err := primitive.ObjectIDFromHex(document.ID.Hex())
-	if err != nil {
+func (r *DocumentRepository) Update(ctx context.Context, document *models.Document) (*models.Document, error) {
+	if err := r.DB.WithContext(ctx).Save(document).Error; err != nil {
 		return nil, err
 	}
-	return r.Collection.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": document})
+	return document, nil
 }
 
-func (r *DocumentRepository) Delete(ctx context.Context, id string) (*mongo.DeleteResult, error) {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
+func (r *DocumentRepository) Delete(ctx context.Context, id uint) error {
+	if err := r.DB.WithContext(ctx).Delete(&models.Document{}, id).Error; err != nil {
+		return err
 	}
-	return r.Collection.DeleteOne(ctx, bson.M{"_id": objID})
+	return nil
 }

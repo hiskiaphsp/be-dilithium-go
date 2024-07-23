@@ -8,26 +8,33 @@ import (
 
 	"be-dilithium/config"
 	"be-dilithium/controllers"
-	controller "be-dilithium/controllers"
 	"be-dilithium/repositories"
+	"be-dilithium/routes"
 	"be-dilithium/services"
-	service "be-dilithium/services"
 )
 
 // Handler initializes and runs the Gin server.
 func Handler() *gin.Engine {
-	// Ensure MongoDB connection is available
-	if config.MongoDB == nil {
-		log.Fatal("MongoDB connection is not available")
+	// Ensure database connection is available
+	if config.DB == nil {
+		log.Fatal("Database connection is not available")
 	}
 
-	// Create database and collection instances
-	db := config.MongoDB.Database(config.DBName)
-	documentRepo := repositories.NewDocumentRepository(db, "documents")
+	// Create repository and service instances
+	documentRepo := repositories.NewDocumentRepository(config.DB)
 	documentService := services.NewDocumentService(documentRepo)
+
+	keyPairRepo := repositories.NewKeyPairRepository(config.DB)
+	keyPairService := services.NewKeyPairService(keyPairRepo)
+
+	signatureRepo := repositories.NewSignatureRepository(config.DB)
+	signatureService := services.NewSignatureService(signatureRepo)
+	// signatureController := controllers.NewSignatureController(signatureService)
+
+	//controller init
 	documentController := controllers.NewDocumentController(documentService, os.Getenv("PUBLIC_STORAGE"))
-	// Initialize the Dilithium controller with a factory function for creating the service
-	dilithiumController := controller.NewDilithiumController(service.NewDilithiumService)
+	keyPairController := controllers.NewKeyPairController(keyPairService)
+	dilithiumController := controllers.NewDilithiumController(services.NewDilithiumService, keyPairService, signatureService)
 
 	// Initialize Gin router
 	router := gin.Default()
@@ -37,21 +44,10 @@ func Handler() *gin.Engine {
 	// Create API v1 group
 	apiV1 := router.Group("/api/v1")
 	{
-		apiV1.POST("/generate-keypair", dilithiumController.GenerateKeyPair)
-		apiV1.POST("/generate-keypair-time", dilithiumController.GenerateKeyPairTime)
-		apiV1.POST("/sign-message", dilithiumController.SignMessage)
-		apiV1.POST("/sign-message-url", dilithiumController.SignMessageUrl)
-		apiV1.POST("/verify-signature", dilithiumController.VerifySignature)
-		apiV1.POST("/verify-signature-url", dilithiumController.VerifySignatureURL)
-		apiV1.POST("/analyze", dilithiumController.AnalyzeExecutionTimeAndSizes)
-		apiV1.POST("/analyze-url", dilithiumController.AnalyzeExecutionTimeAndSizesUrl)
-
-		// Document routes
-		apiV1.POST("/documents", documentController.CreateDocument)
-		apiV1.GET("/documents/:id", documentController.GetDocumentByID)
-		apiV1.GET("/documents", documentController.GetAllDocuments)
-		apiV1.PUT("/documents", documentController.UpdateDocument)
-		apiV1.DELETE("/documents/:id", documentController.DeleteDocument)
+		routes.RegisterDilithiumRoutes(apiV1, dilithiumController)
+		routes.RegisterDocumentRoutes(apiV1, documentController)
+		routes.RegisterKeyPairRoutes(apiV1, keyPairController)
+		// routes.RegisterSignatureRoutes(apiV1, signatureController)
 	}
 
 	return router

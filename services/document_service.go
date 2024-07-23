@@ -3,10 +3,9 @@
 package services
 
 import (
-	"context"
-
 	"be-dilithium/models"
 	"be-dilithium/repositories"
+	"context"
 )
 
 type DocumentService struct {
@@ -18,14 +17,14 @@ func NewDocumentService(repo *repositories.DocumentRepository) *DocumentService 
 }
 
 func (s *DocumentService) Create(ctx context.Context, document *models.Document) (*models.Document, error) {
-	_, err := s.Repo.Create(ctx, document)
+	doc, err := s.Repo.Create(ctx, document)
 	if err != nil {
 		return nil, err
 	}
-	return document, nil
+	return doc, nil
 }
 
-func (s *DocumentService) GetById(ctx context.Context, id string) (*models.Document, error) {
+func (s *DocumentService) GetById(ctx context.Context, id uint) (*models.Document, error) {
 	return s.Repo.GetById(ctx, id)
 }
 
@@ -34,15 +33,15 @@ func (s *DocumentService) GetAll(ctx context.Context) ([]models.Document, error)
 }
 
 func (s *DocumentService) Update(ctx context.Context, document *models.Document) (*models.Document, error) {
-	_, err := s.Repo.Update(ctx, document)
+	doc, err := s.Repo.Update(ctx, document)
 	if err != nil {
 		return nil, err
 	}
-	return document, nil
+	return doc, nil
 }
 
-func (s *DocumentService) Delete(ctx context.Context, id string) (bool, error) {
-	_, err := s.Repo.Delete(ctx, id)
+func (s *DocumentService) Delete(ctx context.Context, id uint) (bool, error) {
+	err := s.Repo.Delete(ctx, id)
 	if err != nil {
 		return false, err
 	}

@@ -1,20 +1,23 @@
 package config
 
 import (
-	"context"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var (
-	Port     string
-	MongoURI string
-	DBName   string
-	MongoDB  *mongo.Client
+	Port   string
+	DBUser string
+	DBPass string
+	DBName string
+	DBHost string
+	DBPort string
+	DB     *gorm.DB
 )
 
 func init() {
@@ -24,16 +27,16 @@ func init() {
 	}
 
 	Port = os.Getenv("PORT")
-	MongoURI = os.Getenv("MONGO_URI")
+	DBUser = os.Getenv("DB_USER")
+	DBPass = os.Getenv("DB_PASS")
 	DBName = os.Getenv("DB_NAME")
+	DBHost = os.Getenv("DB_HOST")
+	DBPort = os.Getenv("DB_PORT")
 
-	clientOptions := options.Client().ApplyURI(MongoURI)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		DBUser, DBPass, DBHost, DBPort, DBName)
 
-	MongoDB, err = mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = MongoDB.Ping(context.Background(), nil)
+	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
