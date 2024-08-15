@@ -3,6 +3,8 @@
 ## Overview
 
 This project is a backend implementation using Go and the Gin framework. It focuses on using the Dilithium post-quantum digital signature algorithm for secure communications.
+LIB: 
+https://pkg.go.dev/github.com/cloudflare/circl/sign/dilithium
 
 ## Requirements
 
