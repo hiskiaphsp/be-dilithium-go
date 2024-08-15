@@ -6,9 +6,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"net/http"
+	"runtime"
 	"time"
 
 	"be-dilithium/models"
@@ -50,6 +50,10 @@ func (ctrl *DilithiumController) GenerateKeyPairTime(c *gin.Context) {
 		return
 	}
 
+	// Capture memory usage before key pair generation
+	var memStatsBefore runtime.MemStats
+	runtime.ReadMemStats(&memStatsBefore)
+
 	startGenerate := time.Now()
 	publicKey, privateKey, err := dilithiumService.GenerateKeyPair()
 	if err != nil {
@@ -57,6 +61,16 @@ func (ctrl *DilithiumController) GenerateKeyPairTime(c *gin.Context) {
 		return
 	}
 	endGenerate := time.Since(startGenerate)
+
+	// Capture memory usage after key pair generation
+	var memStatsAfter runtime.MemStats
+	runtime.ReadMemStats(&memStatsAfter)
+
+	// Calculate memory usage during key pair generation
+	memUsage := memStatsAfter.Alloc - memStatsBefore.Alloc
+
+	// Calculate communication size
+	communicationSize := len(publicKey) + len(privateKey)
 
 	getKeyHash := func(key []byte) string {
 		hash := sha256.Sum256(key)
@@ -114,8 +128,11 @@ func (ctrl *DilithiumController) GenerateKeyPairTime(c *gin.Context) {
 	executionTime := time.Since(startTime)
 
 	utils.SuccessResponse(c, "Key pair generated successfully", gin.H{
-		"execution_time":  executionTime.Microseconds(),
-		"generation_time": endGenerate.Microseconds(),
+		"execution_time":     executionTime.Microseconds(),
+		"generation_time":    endGenerate.Microseconds(),
+		"memory_usage":       memUsage,
+		"communication_size": communicationSize,
+		"variant":            req.Mode,
 	})
 }
 
@@ -223,6 +240,7 @@ func (ctrl *DilithiumController) GenerateKeyPair(c *gin.Context) {
 
 func (ctrl *DilithiumController) SignMessage(c *gin.Context) {
 	startExecution := time.Now()
+
 	// Get private key file
 	privateKeyFile, err := c.FormFile("privateKey")
 	if err != nil {
@@ -267,7 +285,6 @@ func (ctrl *DilithiumController) SignMessage(c *gin.Context) {
 		return
 	}
 
-	fmt.Print(keyPairs)
 	if len(keyPairs) == 0 {
 		utils.ErrorResponse(c, http.StatusNotFound, "Key pair not found", nil)
 		return
@@ -302,6 +319,10 @@ func (ctrl *DilithiumController) SignMessage(c *gin.Context) {
 		return
 	}
 
+	// Capture memory usage before signing
+	var memStatsBefore runtime.MemStats
+	runtime.ReadMemStats(&memStatsBefore)
+
 	startSign := time.Now()
 	signature, err := dilithiumService.SignMessage(privateKeyBytes, messageBytes)
 	if err != nil {
@@ -309,6 +330,16 @@ func (ctrl *DilithiumController) SignMessage(c *gin.Context) {
 		return
 	}
 	signTime := time.Since(startSign).Microseconds()
+
+	// Capture memory usage after signing
+	var memStatsAfter runtime.MemStats
+	runtime.ReadMemStats(&memStatsAfter)
+
+	// Calculate memory usage during signing
+	memUsage := memStatsAfter.Alloc - memStatsBefore.Alloc
+
+	// Calculate communication size
+	communicationSize := len(messageBytes) + len(signature)
 
 	// Compute document hash
 	documentHash := sha256.Sum256(messageBytes)
@@ -329,14 +360,27 @@ func (ctrl *DilithiumController) SignMessage(c *gin.Context) {
 	}
 	executionTime := time.Since(startExecution).Microseconds()
 
-	utils.SuccessResponse(c, "Signature saved successfully", gin.H{
-		"sign_time":      signTime,
-		"execution_time": executionTime,
-	})
+	// Create response
+	response := gin.H{
+		"sign_time":                signTime,
+		"execution_time":           executionTime,
+		"memory_usage_bytes":       memUsage,
+		"communication_size_bytes": communicationSize,
+		"variant":                  mode,
+	}
+
+	// Send response
+	utils.SuccessResponse(c, "Signature saved successfully", response)
+
+	// Clear memory and communication size after sending the response
+	memUsage = 0
+	communicationSize = 0
+	runtime.GC()
 }
 
 func (ctrl *DilithiumController) SignMessageUrl(c *gin.Context) {
 	startExecution := time.Now()
+
 	// Get private key file
 	privateKeyFile, err := c.FormFile("privateKey")
 	if err != nil {
@@ -423,6 +467,10 @@ func (ctrl *DilithiumController) SignMessageUrl(c *gin.Context) {
 		return
 	}
 
+	// Capture memory usage before signing
+	var memStatsBefore runtime.MemStats
+	runtime.ReadMemStats(&memStatsBefore)
+
 	startSign := time.Now()
 	signature, err := dilithiumService.SignMessage(privateKeyBytes, messageBytes)
 	if err != nil {
@@ -430,6 +478,16 @@ func (ctrl *DilithiumController) SignMessageUrl(c *gin.Context) {
 		return
 	}
 	signTime := time.Since(startSign).Microseconds()
+
+	// Capture memory usage after signing
+	var memStatsAfter runtime.MemStats
+	runtime.ReadMemStats(&memStatsAfter)
+
+	// Calculate memory usage during signing
+	memUsage := memStatsAfter.Alloc - memStatsBefore.Alloc
+
+	// Calculate communication size
+	communicationSize := len(messageBytes) + len(signature)
 
 	// Compute document hash
 	documentHash := sha256.Sum256(messageBytes)
@@ -451,13 +509,17 @@ func (ctrl *DilithiumController) SignMessageUrl(c *gin.Context) {
 	executionTime := time.Since(startExecution).Microseconds()
 
 	utils.SuccessResponse(c, "Signature saved successfully", gin.H{
-		"sign_time":      signTime,
-		"execution_time": executionTime,
+		"sign_time":                signTime,
+		"execution_time":           executionTime,
+		"memory_usage_bytes":       memUsage,
+		"communication_size_bytes": communicationSize,
+		"variant":                  mode,
 	})
 }
 
 func (ctrl *DilithiumController) VerifySignature(c *gin.Context) {
 	startExecution := time.Now()
+
 	// Get public key file
 	publicKeyFile, err := c.FormFile("publicKey")
 	if err != nil {
@@ -563,6 +625,11 @@ func (ctrl *DilithiumController) VerifySignature(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
+
+	// Capture memory usage before verification
+	var memStatsBefore runtime.MemStats
+	runtime.ReadMemStats(&memStatsBefore)
+
 	startVerification := time.Now()
 	// Verify the signature
 	valid, err := dilithiumService.VerifySignature(publicKeyBytes, messageBytes, signatureBytes)
@@ -572,17 +639,32 @@ func (ctrl *DilithiumController) VerifySignature(c *gin.Context) {
 	}
 	verificationTime := time.Since(startVerification).Microseconds()
 
+	// Capture memory usage after verification
+	var memStatsAfter runtime.MemStats
+	runtime.ReadMemStats(&memStatsAfter)
+
+	// Calculate memory usage during verification
+	memUsage := memStatsAfter.Alloc - memStatsBefore.Alloc
+
+	// Calculate communication size
+	communicationSize := len(publicKeyBytes) + len(messageBytes) + len(signatureBytes)
+
 	executionTime := time.Since(startExecution).Microseconds()
+
 	// Return JSON response with validity
 	utils.SuccessResponse(c, "Signature verification result", gin.H{
-		"valid":             valid,
-		"verification_time": verificationTime,
-		"execution_time":    executionTime,
+		"valid":                    valid,
+		"verification_time":        verificationTime,
+		"execution_time":           executionTime,
+		"memory_usage_bytes":       memUsage,
+		"communication_size_bytes": communicationSize,
+		"variant":                  mode,
 	})
 }
 
 func (ctrl *DilithiumController) VerifySignatureUrl(c *gin.Context) {
 	startExecution := time.Now()
+
 	// Get public key file
 	publicKeyFile, err := c.FormFile("publicKey")
 	if err != nil {
@@ -694,6 +776,11 @@ func (ctrl *DilithiumController) VerifySignatureUrl(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
+
+	// Capture memory usage before verification
+	var memStatsBefore runtime.MemStats
+	runtime.ReadMemStats(&memStatsBefore)
+
 	startVerification := time.Now()
 	// Verify the signature
 	valid, err := dilithiumService.VerifySignature(publicKeyBytes, messageBytes, signatureBytes)
@@ -703,12 +790,26 @@ func (ctrl *DilithiumController) VerifySignatureUrl(c *gin.Context) {
 	}
 	verificationTime := time.Since(startVerification).Microseconds()
 
+	// Capture memory usage after verification
+	var memStatsAfter runtime.MemStats
+	runtime.ReadMemStats(&memStatsAfter)
+
+	// Calculate memory usage during verification
+	memUsage := memStatsAfter.Alloc - memStatsBefore.Alloc
+
+	// Calculate communication size
+	communicationSize := len(publicKeyBytes) + len(messageBytes) + len(signatureBytes)
+
 	executionTime := time.Since(startExecution).Microseconds()
+
 	// Return JSON response with validity
 	utils.SuccessResponse(c, "Signature verification result", gin.H{
-		"valid":             valid,
-		"verification_time": verificationTime,
-		"execution_time":    executionTime,
+		"valid":                    valid,
+		"verification_time":        verificationTime,
+		"execution_time":           executionTime,
+		"memory_usage_bytes":       memUsage,
+		"communication_size_bytes": communicationSize,
+		"variant":                  mode,
 	})
 }
 
